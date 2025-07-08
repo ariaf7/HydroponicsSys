@@ -1,8 +1,8 @@
+nicegui
 opencv-python-headless
 plantcv
 pandas
 numpy
 matplotlib
 seaborn
-nicegui
 
