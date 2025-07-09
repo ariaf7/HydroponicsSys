@@ -1,94 +1,71 @@
 from nicegui import ui
 from PIL import Image
 import os
+import tempfile
 import shutil
 import zipfile
-import tempfile
 import io
+from your_code import run_cropping
 
-uploaded_images = []
-temp_input_dir = tempfile.mkdtemp()
-temp_output_dir = tempfile.mkdtemp()
+clicks = []
 
-x_input = y_input = w_input = h_input = None
-image_preview = None
-zip_buffer = None
+def on_image_click(e):
+    if len(clicks) < 4:
+        clicks.append((e.args.x, e.args.y))
+        with ui.row():
+            ui.label(f"Point {len(clicks)}: ({e.args.x}, {e.args.y})")
+    if len(clicks) == 4:
+        with ui.row():
+            ui.label("✅ 4 points selected! You can now crop.")
 
+def reset_points():
+    clicks.clear()
 
-def save_uploaded_files(files):
-    uploaded_images.clear()
-    shutil.rmtree(temp_input_dir)
-    os.makedirs(temp_input_dir, exist_ok=True)
+with ui.column():
+    uploaded = ui.upload(multiple=True).props('accept=".jpg,.png,.jpeg"')
 
-    for file in files:
-        file_path = os.path.join(temp_input_dir, file.name)
-        file.save(file_path)
-        uploaded_images.append(file_path)
+    image_container = ui.column()
+    start_button = ui.button("Start Cropping", on_click=reset_points)
 
-    if uploaded_images:
-        show_image_preview(uploaded_images[0])
+    def process_images():
+        if len(clicks) != 4 or not uploaded.value:
+            ui.notify("Upload images and select 4 points", type="warning")
+            return
 
+        x_coords = [pt[0] for pt in clicks]
+        y_coords = [pt[1] for pt in clicks]
+        x, y = min(x_coords), min(y_coords)
+        w, h = max(x_coords) - x, max(y_coords) - y
+        roi = (x, y, w, h)
 
-def show_image_preview(image_path):
-    global image_preview
-    if image_preview:
-        image_preview.delete()
+        temp_input = tempfile.mkdtemp()
+        for file in uploaded.files:
+            file.save(os.path.join(temp_input, file.name))
 
-    with Image.open(image_path) as img:
-        img = img.convert("RGB")
-        img.save("preview.jpg")  # temporary image for UI
-        image_preview = ui.image("preview.jpg").classes("w-1/2")
+        temp_output = tempfile.mkdtemp()
+        run_cropping(temp_input, temp_output, roi)
 
+        zip_buffer = io.BytesIO()
+        with zipfile.ZipFile(zip_buffer, "w") as zipf:
+            for fname in os.listdir(temp_output):
+                fpath = os.path.join(temp_output, fname)
+                zipf.write(fpath, arcname=fname)
+        zip_buffer.seek(0)
 
-def crop_images():
-    global zip_buffer
-    x = int(x_input.value)
-    y = int(y_input.value)
-    w = int(w_input.value)
-    h = int(h_input.value)
+        ui.download(data=zip_buffer, filename="cropped_images.zip")
+        shutil.rmtree(temp_input)
+        shutil.rmtree(temp_output)
 
-    shutil.rmtree(temp_output_dir)
-    os.makedirs(temp_output_dir, exist_ok=True)
+    crop_button = ui.button("Crop and Download ZIP", on_click=process_images)
 
-    for path in uploaded_images:
-        try:
-            with Image.open(path) as img:
-                cropped = img.crop((x, y, x + w, y + h))
-                out_path = os.path.join(temp_output_dir, os.path.basename(path))
-                cropped.save(out_path)
-        except Exception as e:
-            print(f"Failed to crop {path}: {e}")
+    def show_first_image():
+        if uploaded.value:
+            file = uploaded.files[0]
+            path = os.path.join(tempfile.gettempdir(), file.name)
+            file.save(path)
+            with Image.open(path) as im:
+                img_ui = ui.image(path).on("click", on_image_click).style("cursor: crosshair;")
+                image_container.clear()
+                image_container.add(img_ui)
 
-    zip_buffer = io.BytesIO()
-    with zipfile.ZipFile(zip_buffer, "w") as zipf:
-        for file in os.listdir(temp_output_dir):
-            full_path = os.path.join(temp_output_dir, file)
-            zipf.write(full_path, arcname=file)
-    zip_buffer.seek(0)
-
-    ui.button("📦 Download Cropped ZIP", on_click=download_zip)
-
-
-def download_zip():
-    if zip_buffer:
-        ui.download(zip_buffer, filename="cropped_images.zip")
-
-
-# --- UI Layout ---
-ui.markdown("## 🌿 Crop Images")
-
-ui.upload(
-    label="Upload image files",
-    multiple=True,
-    on_upload=lambda e: save_uploaded_files(e.files),
-).props('accept=".jpg,.jpeg,.png"')
-
-with ui.row():
-    x_input = ui.number("Crop X", value=0, min=0)
-    y_input = ui.number("Crop Y", value=0, min=0)
-    w_input = ui.number("Crop Width", value=100, min=1)
-    h_input = ui.number("Crop Height", value=100, min=1)
-
-ui.button("✂️ Run Cropping", on_click=crop_images, color="primary")
-
-ui.run()
+    uploaded.on("change", show_first_image)
