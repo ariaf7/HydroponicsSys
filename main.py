@@ -5,14 +5,9 @@ import tempfile
 import shutil
 import zipfile
 import io
-from nicegui import ui
-from PIL import Image
-import os
-import tempfile
-import shutil
-import zipfile
-import io
 import cv2
+
+# Cropping function using x, y, w, h
 
 def run_cropping(input_folder, output_folder, roi):
     os.makedirs(output_folder, exist_ok=True)
@@ -28,26 +23,30 @@ def run_cropping(input_folder, output_folder, roi):
         output_path = os.path.join(output_folder, filename)
         cv2.imwrite(output_path, cropped)
 
+# Track user clicks
 clicks = []
+
+# Handle image click
 
 def on_image_click(e):
     if len(clicks) < 4:
         clicks.append((e.args.x, e.args.y))
-        with ui.row():
-            ui.label(f"Point {len(clicks)}: ({e.args.x}, {e.args.y})")
+        ui.label(f"Point {len(clicks)}: ({e.args.x}, {e.args.y})")
     if len(clicks) == 4:
-        with ui.row():
-            ui.label("✅ 4 points selected! You can now crop.")
+        ui.label("✅ 4 points selected! You can now crop.")
+
+# Clear click points
 
 def reset_points():
     clicks.clear()
 
+# UI setup
 with ui.column():
     uploaded = ui.upload(multiple=True).props('accept=".jpg,.png,.jpeg"')
-
     image_container = ui.column()
-    start_button = ui.button("Start Cropping", on_click=reset_points)
+    ui.button("Start Cropping", on_click=reset_points)
 
+    # Main processing function
     def process_images():
         if len(clicks) != 4 or not uploaded.value:
             ui.notify("Upload images and select 4 points", type="warning")
@@ -77,15 +76,17 @@ with ui.column():
         shutil.rmtree(temp_input)
         shutil.rmtree(temp_output)
 
-    crop_button = ui.button("Crop and Download ZIP", on_click=process_images)
+    ui.button("Crop and Download ZIP", on_click=process_images)
 
+    # Show first image with click capture
     def show_first_image():
         if uploaded.value:
             file = uploaded.files[0]
             path = os.path.join(tempfile.gettempdir(), file.name)
             file.save(path)
-            img_ui = ui.image(path).on("click", on_image_click).style("cursor: crosshair;")
             image_container.clear()
-            image_container.add(img_ui)
+            image_container.add(
+                ui.image(path).on("click", on_image_click).style("cursor: crosshair;")
+            )
 
     uploaded.on("change", show_first_image)
