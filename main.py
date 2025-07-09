@@ -5,7 +5,28 @@ import tempfile
 import shutil
 import zipfile
 import io
-from your_code import run_cropping
+from nicegui import ui
+from PIL import Image
+import os
+import tempfile
+import shutil
+import zipfile
+import io
+import cv2
+
+def run_cropping(input_folder, output_folder, roi):
+    os.makedirs(output_folder, exist_ok=True)
+    for filename in os.listdir(input_folder):
+        if not filename.lower().endswith(('.png', '.jpg', '.jpeg')):
+            continue
+        filepath = os.path.join(input_folder, filename)
+        image = cv2.imread(filepath)
+        if image is None:
+            continue
+        x, y, w, h = roi
+        cropped = image[int(y):int(y + h), int(x):int(x + w)]
+        output_path = os.path.join(output_folder, filename)
+        cv2.imwrite(output_path, cropped)
 
 clicks = []
 
@@ -63,9 +84,8 @@ with ui.column():
             file = uploaded.files[0]
             path = os.path.join(tempfile.gettempdir(), file.name)
             file.save(path)
-            with Image.open(path) as im:
-                img_ui = ui.image(path).on("click", on_image_click).style("cursor: crosshair;")
-                image_container.clear()
-                image_container.add(img_ui)
+            img_ui = ui.image(path).on("click", on_image_click).style("cursor: crosshair;")
+            image_container.clear()
+            image_container.add(img_ui)
 
     uploaded.on("change", show_first_image)
