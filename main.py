@@ -6,6 +6,8 @@ import shutil
 import zipfile
 import io
 import cv2
+from nicegui.events import MouseEventArguments
+from nicegui.elements.image import Image as UIImage
 
 # Title
 ui.label("🌱 Hydroponic System Image Cropper").classes("text-2xl font-bold mb-4")
@@ -27,11 +29,16 @@ def run_cropping(input_folder, output_folder, roi):
         output_path = os.path.join(output_folder, filename)
         cv2.imwrite(output_path, cropped)
 
-def on_image_click(e):
+
+def on_image_click(e: MouseEventArguments):
     if len(clicks) < 4:
-        clicks.append((e.args.x, e.args.y))
+        clicks.append((e.image_x, e.image_y))
         with ui.row():
-            ui.label(f"Point {len(clicks)}: ({e.args.x}, {e.args.y})")
+            ui.label(f"Point {len(clicks)}: ({int(e.image_x)}, {int(e.image_y)})")
+
+    image_container.clear()
+    show_first_image(overlay=True)
+
     if len(clicks) == 4:
         with ui.row():
             ui.label("✅ 4 points selected! You can now crop.")
@@ -39,13 +46,19 @@ def on_image_click(e):
 def reset_points():
     clicks.clear()
     ui.notify("🧹 Cleared points", type="info")
-
 # Upload
 uploaded = ui.upload(multiple=True).props('accept=".jpg,.png,.jpeg"')
 
 # UI elements
 image_container = ui.column()
-ui.button("🖱 Start Cropping", on_click=reset_points)
+
+def handle_reset():
+    reset_points()
+    image_container.clear()
+    show_first_image()
+
+ui.button("🧹 Reset Points", on_click=handle_reset)
+
 
 # Cropping logic
 def process_images():
@@ -81,14 +94,34 @@ def process_images():
 ui.button("📦 Crop and Download ZIP", on_click=process_images)
 
 # Display uploaded image
-def show_first_image():
-    uploaded_file_list = uploaded._props.get('files', [])
-    if uploaded_file_list:
-        file = uploaded_file_list[0]
+def show_first_image(overlay=False):
+    if uploaded_files:
+        file = uploaded_files[0]
         path = os.path.join(tempfile.gettempdir(), file.name)
         file.save(path)
+
+        img = UIImage(path).on("click", on_image_click).style("cursor: crosshair;")
         image_container.clear()
-        ui.image(path).on("click", on_image_click).style("cursor: crosshair;")
+        image_container.add(img)
+
+        if overlay and clicks:
+            with image_container:
+                for i, (x, y) in enumerate(clicks):
+                    ui.label(f"🔴 Point {i+1}: ({int(x)}, {int(y)})").style(f'position: absolute; left: {x}px; top: {y}px; color: red; font-size: 10px;')
+
+                if len(clicks) == 4:
+                    # Draw transparent rectangle from min/max points
+                    x_coords = [pt[0] for pt in clicks]
+                    y_coords = [pt[1] for pt in clicks]
+                    x, y = min(x_coords), min(y_coords)
+                    w, h = max(x_coords) - x, max(y_coords) - y
+                    rectangle_style = (
+                        f'position: absolute; '
+                        f'left: {x}px; top: {y}px; '
+                        f'width: {w}px; height: {h}px; '
+                        f'border: 2px solid red; background-color: rgba(255, 0, 0, 0.2);'
+                    )
+                    ui.label("").style(rectangle_style)
 
 uploaded.on("change", show_first_image)
 
