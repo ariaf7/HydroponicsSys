@@ -11,18 +11,20 @@ uploaded_files = []
 clicks = []
 
 points_display = ui.column()
+points_display.append(ui.label("🖱 Click 4 points on the image to select ROI"))
 
 def on_image_click(e):
     if len(clicks) < 4:
         clicks.append((e.args.x, e.args.y))
-        points_display.add(ui.label(f"Point {len(clicks)}: ({int(e.args.x)}, {int(e.args.y)})"))
+        points_display.append(ui.label(f"Point {len(clicks)}: ({int(e.args.x)}, {int(e.args.y)})"))
     if len(clicks) == 4:
-        points_display.add(ui.label("✅ 4 points selected! You can now crop."))
+        points_display.append(ui.label("✅ 4 points selected! You can now crop."))
 
 def reset_points():
     clicks.clear()
     points_display.clear()
-    points_display.add(ui.label("🖱 Click 4 points on the image to select ROI"))
+    points_display.append(ui.label("🖱 Click 4 points on the image to select ROI"))
+
 
 upload = ui.upload(multiple=True).props('accept=".jpg,.png,.jpeg"')
 
