@@ -6,14 +6,9 @@ import shutil
 import zipfile
 import io
 import cv2
-from nicegui.events import MouseEventArguments
-from nicegui.elements.image import Image as UIImage
 
-# Title
-ui.label("🌱 Hydroponic System Image Cropper").classes("text-2xl font-bold mb-4")
-
-# Globals
 clicks = []
+uploaded_files = []
 
 def run_cropping(input_folder, output_folder, roi):
     os.makedirs(output_folder, exist_ok=True)
@@ -29,42 +24,23 @@ def run_cropping(input_folder, output_folder, roi):
         output_path = os.path.join(output_folder, filename)
         cv2.imwrite(output_path, cropped)
 
-
-def on_image_click(e: MouseEventArguments):
+def on_image_click(e):
     if len(clicks) < 4:
-        clicks.append((e.image_x, e.image_y))
-        with ui.row():
-            ui.label(f"Point {len(clicks)}: ({int(e.image_x)}, {int(e.image_y)})")
-
-    image_container.clear()
-    show_first_image(overlay=True)
-
-    if len(clicks) == 4:
-        with ui.row():
-            ui.label("✅ 4 points selected! You can now crop.")
+        clicks.append((e.args.x, e.args.y))
+        points_display.clear()
+        for i, pt in enumerate(clicks):
+            points_display.label(f"Point {i+1}: {pt}")
+        if len(clicks) == 4:
+            points_display.label("✅ 4 points selected! You can now crop.")
 
 def reset_points():
     clicks.clear()
-    ui.notify("🧹 Cleared points", type="info")
-# Upload
-uploaded = ui.upload(multiple=True).props('accept=".jpg,.png,.jpeg"')
+    points_display.clear()
+    points_display.label("🖱 Click 4 points on the image to select ROI")
 
-# UI elements
-image_container = ui.column()
-
-def handle_reset():
-    reset_points()
-    image_container.clear()
-    show_first_image()
-
-ui.button("🧹 Reset Points", on_click=handle_reset)
-
-
-# Cropping logic
 def process_images():
-    uploaded_file_list = uploaded._props.get('files', [])
-    if len(clicks) != 4 or not uploaded_file_list:
-        ui.notify("Upload images and select 4 points", type="warning")
+    if len(clicks) != 4 or not uploaded_files:
+        ui.notify("Upload images and click 4 points", type="warning")
         return
 
     x_coords = [pt[0] for pt in clicks]
@@ -74,8 +50,9 @@ def process_images():
     roi = (x, y, w, h)
 
     temp_input = tempfile.mkdtemp()
-    for file in uploaded_file_list:
-        file.save(os.path.join(temp_input, file.name))
+    for file in uploaded_files:
+        save_path = os.path.join(temp_input, file.name)
+        file.save(save_path)
 
     temp_output = tempfile.mkdtemp()
     run_cropping(temp_input, temp_output, roi)
@@ -91,39 +68,33 @@ def process_images():
     shutil.rmtree(temp_input)
     shutil.rmtree(temp_output)
 
-ui.button("📦 Crop and Download ZIP", on_click=process_images)
-
-# Display uploaded image
-def show_first_image(overlay=False):
+def show_first_image():
     if uploaded_files:
         file = uploaded_files[0]
-        path = os.path.join(tempfile.gettempdir(), file.name)
-        file.save(path)
-
-        img = UIImage(path).on("click", on_image_click).style("cursor: crosshair;")
+        temp_path = os.path.join(tempfile.gettempdir(), file.name)
+        file.save(temp_path)
         image_container.clear()
-        image_container.add(img)
+        image_container.image(temp_path).on("click", on_image_click).style("cursor: crosshair")
 
-        if overlay and clicks:
-            with image_container:
-                for i, (x, y) in enumerate(clicks):
-                    ui.label(f"🔴 Point {i+1}: ({int(x)}, {int(y)})").style(f'position: absolute; left: {x}px; top: {y}px; color: red; font-size: 10px;')
+with ui.column():
+    ui.label("🌿 Hydroponic System Cropping Tool").classes("text-2xl font-bold")
 
-                if len(clicks) == 4:
-                    # Draw transparent rectangle from min/max points
-                    x_coords = [pt[0] for pt in clicks]
-                    y_coords = [pt[1] for pt in clicks]
-                    x, y = min(x_coords), min(y_coords)
-                    w, h = max(x_coords) - x, max(y_coords) - y
-                    rectangle_style = (
-                        f'position: absolute; '
-                        f'left: {x}px; top: {y}px; '
-                        f'width: {w}px; height: {h}px; '
-                        f'border: 2px solid red; background-color: rgba(255, 0, 0, 0.2);'
-                    )
-                    ui.label("").style(rectangle_style)
+    # Upload section
+    def handle_upload(e):
+        uploaded_files.clear()
+        uploaded_files.extend(e.files)
+        reset_points()
+        show_first_image()
 
-uploaded.on("change", show_first_image)
+    ui.upload(multiple=True, on_upload=handle_upload).props('accept=".jpg,.png,.jpeg"')
+
+    image_container = ui.column()
+    points_display = ui.column()
+
+    with ui.row():
+        ui.button("🔄 Reset Points", on_click=reset_points)
+        ui.button("✂️ Crop and Download ZIP", on_click=process_images)
+
 
 # ---------------- RUN SERVER ----------------
 
