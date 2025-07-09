@@ -36,7 +36,9 @@ def on_image_click(e):
 def reset_points():
     clicks.clear()
     points_display.clear()
-    points_display.label("🖱 Click 4 points on the image to select ROI")
+    with points_display:
+        ui.label("🖱 Click 4 points on the image to select ROI")
+
 
 def process_images():
     if len(clicks) != 4 or not uploaded_files:
