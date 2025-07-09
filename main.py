@@ -42,12 +42,13 @@ with ui.column() as main_column:
             ui.notify("✅ 4 points selected. Ready to crop!", type="success")
 
     def show_first_image():
-        if uploaded.value:
+        if uploaded.files:
             file = uploaded.files[0]
             path = os.path.join(tempfile.gettempdir(), file.name)
             file.save(path)
             image_container.clear()
             ui.image(path).on("click", on_image_click).style("cursor: crosshair;")
+
 
     def process_images():
         if len(clicks) != 4 or not uploaded.value:
