@@ -7,8 +7,7 @@ import zipfile
 import io
 import cv2
 
-# Cropping function using x, y, w, h
-
+# ---------------- CROPPING FUNCTION ----------------
 def run_cropping(input_folder, output_folder, roi):
     os.makedirs(output_folder, exist_ok=True)
     for filename in os.listdir(input_folder):
@@ -23,30 +22,33 @@ def run_cropping(input_folder, output_folder, roi):
         output_path = os.path.join(output_folder, filename)
         cv2.imwrite(output_path, cropped)
 
-# Track user clicks
+# ---------------- GLOBAL STATE ----------------
 clicks = []
 
-# Handle image click
+# ---------------- UI SETUP ----------------
+ui.markdown("# 🌱 Hydroponic System Analysis")
 
-def on_image_click(e):
-    if len(clicks) < 4:
-        clicks.append((e.args.x, e.args.y))
-        ui.label(f"Point {len(clicks)}: ({e.args.x}, {e.args.y})")
-    if len(clicks) == 4:
-        ui.label("✅ 4 points selected! You can now crop.")
-
-# Clear click points
-
-def reset_points():
-    clicks.clear()
-
-# UI setup
-with ui.column():
+with ui.column() as main_column:
     uploaded = ui.upload(multiple=True).props('accept=".jpg,.png,.jpeg"')
-    image_container = ui.column()
-    ui.button("Start Cropping", on_click=reset_points)
 
-    # Main processing function
+    image_container = ui.column()
+    ui.button("Start Cropping", on_click=lambda: [clicks.clear(), image_container.clear(), show_first_image()])
+
+    def on_image_click(e):
+        if len(clicks) < 4:
+            clicks.append((e.args.x, e.args.y))
+            ui.notify(f"Point {len(clicks)}: ({e.args.x}, {e.args.y})", type='info')
+        if len(clicks) == 4:
+            ui.notify("✅ 4 points selected. Ready to crop!", type="success")
+
+    def show_first_image():
+        if uploaded.value:
+            file = uploaded.files[0]
+            path = os.path.join(tempfile.gettempdir(), file.name)
+            file.save(path)
+            image_container.clear()
+            ui.image(path).on("click", on_image_click).style("cursor: crosshair;")
+
     def process_images():
         if len(clicks) != 4 or not uploaded.value:
             ui.notify("Upload images and select 4 points", type="warning")
@@ -78,18 +80,9 @@ with ui.column():
 
     ui.button("Crop and Download ZIP", on_click=process_images)
 
-    # Show first image with click capture
-    def show_first_image():
-        if uploaded.value:
-            file = uploaded.files[0]
-            path = os.path.join(tempfile.gettempdir(), file.name)
-            file.save(path)
-            image_container.clear()
-            image_container.add(
-                ui.image(path).on("click", on_image_click).style("cursor: crosshair;")
-            )
-
     uploaded.on("change", show_first_image)
+
+# ---------------- RUN SERVER ----------------
 
 ui.run(host="0.0.0.0", port=8080)
 
