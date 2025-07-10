@@ -10,15 +10,6 @@ import cv2
 clicks = []
 uploaded_files = []
 
-# Display for showing selected points
-points_display = ui.column()
-points_display.clear()
-points_display.clear()
-points_display.append(ui.label("🖱 Click 4 points on the image to select ROI"))
-
-# Container for image
-image_container = ui.column()
-
 def run_cropping(input_folder, output_folder, roi):
     os.makedirs(output_folder, exist_ok=True)
     for filename in os.listdir(input_folder):
@@ -36,19 +27,15 @@ def run_cropping(input_folder, output_folder, roi):
 def on_image_click(e: events.MouseEventArguments):
     if len(clicks) < 4:
         clicks.append((e.image_x, e.image_y))
-        points_display.clear()
-        points_display.append(ui.label("🖱 Click 4 points on the image to select ROI"))
-        for i, (x, y) in enumerate(clicks, 1):
-            points_display.append(ui.label(f"Point {i}: ({int(x)}, {int(y)})"))
+        ui.notify(f"Point {len(clicks)}: ({int(e.image_x)}, {int(e.image_y)})")
         if len(clicks) == 4:
-            points_display.append(ui.label("✅ 4 points selected! You can now crop."))
+            ui.notify("✅ 4 points selected! You can now crop.")
     else:
         ui.notify("Already selected 4 points. Press Reset to start over.", type="warning")
 
 def reset_points():
     clicks.clear()
-    points_display.clear()
-    points_display.append(ui.label("🖱 Click 4 points on the image to select ROI"))
+    ui.notify("🧹 Points reset. Please click 4 new points on the image.")
 
 def show_first_image():
     if not uploaded_files:
@@ -56,8 +43,7 @@ def show_first_image():
     first_file = uploaded_files[0]
     temp_path = os.path.join(tempfile.gettempdir(), first_file.name)
     first_file.save(temp_path)
-    image_container.clear()
-    image_container.append(ui.interactive_image(temp_path, on_mouse=on_image_click, events=['click'], cross=True))
+    ui.interactive_image(temp_path, on_mouse=on_image_click, events=['click'], cross=True)
 
 def process_images():
     if len(clicks) != 4 or not uploaded_files:
@@ -97,7 +83,7 @@ upload_widget = ui.upload(multiple=True).props('accept=".jpg,.jpeg,.png"')
 @upload_widget.on("upload")
 def handle_upload(e: events.UploadEventArguments):
     uploaded_files.clear()
-    uploaded_files.extend(e.files)
+    uploaded_files.extend(e.files or [])
     reset_points()
     show_first_image()
 
