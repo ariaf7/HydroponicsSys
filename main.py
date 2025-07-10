@@ -26,6 +26,9 @@ def run_cropping(input_folder, output_folder, roi):
 
 def on_image_click(e: events.MouseEventArguments):
     if len(clicks) < 4:
+        color = 'SkyBlue' if e.type == 'mousedown' else 'SteelBlue'
+        ui.content += f'<circle cx="{e.image_x}" cy="{e.image_y}" r="15" fill="none" stroke="{color}" stroke-width="4" />'
+        ui.notify(f'{e.type} at ({e.image_x:.1f}, {e.image_y:.1f})')
         clicks.append((e.image_x, e.image_y))
         ui.notify(f"Point {len(clicks)}: ({int(e.image_x)}, {int(e.image_y)})")
         if len(clicks) == 4:
@@ -39,12 +42,15 @@ def reset_points():
 
 def show_first_image():
     if not uploaded_files:
+        ui.notify("return.")
         return
+    
     first_file = uploaded_files[0]
     temp_path = os.path.join(tempfile.gettempdir(), first_file.name)
     with open(temp_path, 'wb') as f:
         f.write(first_file.content.read())
     ui.interactive_image(temp_path, on_mouse=on_image_click, events=['click'], cross=True)
+    ui.notify("made.")
 
 def process_images():
     if len(clicks) != 4 or not uploaded_files:
