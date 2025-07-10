@@ -7,48 +7,16 @@ import zipfile
 import io
 import cv2
 
-uploaded_files = []
+from nicegui import ui
+from PIL import Image
+import os
+import tempfile
+import shutil
+import zipfile
+import io
+import cv2
+
 clicks = []
-
-points_display = ui.column()
-points_display.append(ui.label("🖱 Click 4 points on the image to select ROI"))
-
-def on_image_click(e):
-    if len(clicks) < 4:
-        clicks.append((e.args.x, e.args.y))
-        points_display.append(ui.label(f"Point {len(clicks)}: ({int(e.args.x)}, {int(e.args.y)})"))
-    if len(clicks) == 4:
-        points_display.append(ui.label("✅ 4 points selected! You can now crop."))
-
-def reset_points():
-    clicks.clear()
-    points_display.clear()
-    points_display.append(ui.label("🖱 Click 4 points on the image to select ROI"))
-
-
-upload = ui.upload(multiple=True).props('accept=".jpg,.png,.jpeg"')
-
-image_container = ui.column()
-crop_button = ui.button("Crop and Download ZIP", on_click=lambda: process_images())
-
-def show_first_image():
-    if not upload.value:
-        image_container.clear()
-        return
-
-    reset_points()
-    uploaded_files.clear()
-    uploaded_files.extend(upload.value)
-
-    first_file = uploaded_files[0]
-    temp_path = os.path.join(tempfile.gettempdir(), first_file.name)
-    first_file.save(temp_path)
-
-    image_container.clear()
-    img_ui = ui.image(temp_path).style("cursor: crosshair;").on('click', on_image_click)
-    image_container.add(img_ui)
-
-upload.on('change', show_first_image)
 
 def run_cropping(input_folder, output_folder, roi):
     os.makedirs(output_folder, exist_ok=True)
@@ -64,9 +32,47 @@ def run_cropping(input_folder, output_folder, roi):
         output_path = os.path.join(output_folder, filename)
         cv2.imwrite(output_path, cropped)
 
+uploaded_files = []
+
+points_display = ui.column()
+with points_display:
+    ui.label("🖱 Click 4 points on the image to select ROI")
+
+image_container = ui.column()
+
+def on_image_click(e):
+    if len(clicks) < 4:
+        clicks.append((e.args.x, e.args.y))
+        points_display.clear()
+        with points_display:
+            ui.label("🖱 Click 4 points on the image to select ROI")
+            for i, (x, y) in enumerate(clicks, 1):
+                ui.label(f"Point {i}: ({int(x)}, {int(y)})")
+        if len(clicks) == 4:
+            with points_display:
+                ui.label("✅ 4 points selected! You can now crop.")
+    else:
+        ui.notify("Already selected 4 points. Press Reset to start over.", type="warning")
+
+def reset_points():
+    clicks.clear()
+    points_display.clear()
+    with points_display:
+        ui.label("🖱 Click 4 points on the image to select ROI")
+
+def show_first_image(files):
+    if not files:
+        return
+    first_file = files[0]
+    temp_path = os.path.join(tempfile.gettempdir(), first_file.name)
+    first_file.save(temp_path)
+    image_container.clear()
+    with image_container:
+        ui.image(temp_path).on("click", on_image_click).style("cursor: crosshair;")
+
 def process_images():
     if len(clicks) != 4 or not uploaded_files:
-        ui.notify("Please upload images and select exactly 4 points.", color="red")
+        ui.notify("Please upload images and select exactly 4 points", type="warning")
         return
 
     x_coords = [pt[0] for pt in clicks]
@@ -94,14 +100,17 @@ def process_images():
     shutil.rmtree(temp_input)
     shutil.rmtree(temp_output)
 
-with ui.column():
-    ui.label("🚀 Upload images, click 4 points on the first image to select ROI, then crop and download ZIP")
-    points_display.add(ui.label("🖱 Click 4 points on the image to select ROI"))
-    image_container
-    crop_button
+ui.button("Reset Points", on_click=reset_points)
+ui.button("Crop and Download ZIP", on_click=process_images)
 
-ui.run()
+upload = ui.upload(multiple=True).props('accept=".jpg,.jpeg,.png"')
 
+@upload.on("update")
+def on_upload(e):
+    uploaded_files.clear()
+    uploaded_files.extend(e.args)
+    reset_points()
+    show_first_image(uploaded_files)
 
 # ---------------- RUN SERVER ----------------
 
