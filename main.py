@@ -6,17 +6,18 @@ import shutil
 import zipfile
 import io
 import cv2
+
 clicks = []
 uploaded_files = []
 
 # Display for showing selected points
 points_display = ui.column()
 points_display.clear()
-points_display.add(ui.label("🖱 Click 4 points on the image to select ROI"))
+points_display.clear()
+points_display.append(ui.label("🖱 Click 4 points on the image to select ROI"))
 
 # Container for image
 image_container = ui.column()
-
 
 def run_cropping(input_folder, output_folder, roi):
     os.makedirs(output_folder, exist_ok=True)
@@ -32,25 +33,22 @@ def run_cropping(input_folder, output_folder, roi):
         output_path = os.path.join(output_folder, filename)
         cv2.imwrite(output_path, cropped)
 
-
 def on_image_click(e: events.MouseEventArguments):
     if len(clicks) < 4:
         clicks.append((e.image_x, e.image_y))
         points_display.clear()
-        points_display.add(ui.label("🖱 Click 4 points on the image to select ROI"))
+        points_display.append(ui.label("🖱 Click 4 points on the image to select ROI"))
         for i, (x, y) in enumerate(clicks, 1):
-            points_display.add(ui.label(f"Point {i}: ({int(x)}, {int(y)})"))
+            points_display.append(ui.label(f"Point {i}: ({int(x)}, {int(y)})"))
         if len(clicks) == 4:
-            points_display.add(ui.label("✅ 4 points selected! You can now crop."))
+            points_display.append(ui.label("✅ 4 points selected! You can now crop."))
     else:
         ui.notify("Already selected 4 points. Press Reset to start over.", type="warning")
-
 
 def reset_points():
     clicks.clear()
     points_display.clear()
-    points_display.add(ui.label("🖱 Click 4 points on the image to select ROI"))
-
+    points_display.append(ui.label("🖱 Click 4 points on the image to select ROI"))
 
 def show_first_image():
     if not uploaded_files:
@@ -59,8 +57,7 @@ def show_first_image():
     temp_path = os.path.join(tempfile.gettempdir(), first_file.name)
     first_file.save(temp_path)
     image_container.clear()
-    image_container.add(ui.interactive_image(temp_path, on_mouse=on_image_click, events=['click'], cross=True))
-
+    image_container.append(ui.interactive_image(temp_path, on_mouse=on_image_click, events=['click'], cross=True))
 
 def process_images():
     if len(clicks) != 4 or not uploaded_files:
@@ -92,7 +89,6 @@ def process_images():
     shutil.rmtree(temp_input)
     shutil.rmtree(temp_output)
 
-
 ui.button("Reset Points", on_click=reset_points)
 ui.button("Crop and Download ZIP", on_click=process_images)
 
@@ -104,7 +100,5 @@ def handle_upload(e: events.UploadEventArguments):
     uploaded_files.extend(e.files)
     reset_points()
     show_first_image()
-# ---------------- RUN SERVER ----------------
 
-ui.run(host="0.0.0.0", port=8080)
-
+ui.run()
