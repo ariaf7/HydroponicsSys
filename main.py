@@ -35,14 +35,15 @@ def on_image_click(e: events.MouseEventArguments):
 
 def reset_points():
     clicks.clear()
-    ui.notify("🧹 Points reset. Please click 4 new points on the image.")
+    ui.notify("🩹 Points reset. Please click 4 new points on the image.")
 
 def show_first_image():
     if not uploaded_files:
         return
     first_file = uploaded_files[0]
     temp_path = os.path.join(tempfile.gettempdir(), first_file.name)
-    first_file.save(temp_path)
+    with open(temp_path, 'wb') as f:
+        f.write(first_file.content.read())
     ui.interactive_image(temp_path, on_mouse=on_image_click, events=['click'], cross=True)
 
 def process_images():
@@ -58,7 +59,9 @@ def process_images():
 
     temp_input = tempfile.mkdtemp()
     for file in uploaded_files:
-        file.save(os.path.join(temp_input, file.name))
+        path = os.path.join(temp_input, file.name)
+        with open(path, 'wb') as f:
+            f.write(file.content.read())
 
     temp_output = tempfile.mkdtemp()
     run_cropping(temp_input, temp_output, roi)
@@ -80,11 +83,12 @@ ui.button("Crop and Download ZIP", on_click=process_images)
 
 upload_widget = ui.upload(multiple=True).props('accept=".jpg,.jpeg,.png"')
 
-@upload_widget.on("upload")
 def handle_upload(e: events.UploadEventArguments):
     uploaded_files.clear()
     uploaded_files.extend(e.files or [])
     reset_points()
     show_first_image()
+
+upload_widget.on_upload(handle_upload)
 
 ui.run()
