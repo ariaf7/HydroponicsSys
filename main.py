@@ -55,6 +55,7 @@ def show_first_image():
 def process_images():
     if not uploaded_files:
         ui.notify("Please", type="warning")
+    show_first_image()    
     if len(clicks) != 4 or not uploaded_files:
         ui.notify("Please upload images and select exactly 4 points", type="warning")
         return
@@ -91,13 +92,22 @@ ui.button("Crop and Download ZIP", on_click=process_images)
 
 upload_widget = ui.upload(multiple=True).on("multi_upload", lambda e: handle_upload(e))
 
-def handle_upload(e: events.MultiUploadEventArguments):
-    global uploaded_files
-    uploaded_files.clear()
-    uploaded_files.extend(e.files or [])
-    reset_points()
-    show_first_image()
+uploaded_files = []
 
-upload_widget.on_upload(handle_upload)
+def handle_upload(e: events.UploadEventArguments):
+    uploaded_files.append(e.name)
+    ui.notify(f'Uploaded {e.name}')
+
+def update_file_list():
+    file_list_container.clear()
+    with file_list_container:
+        ui.label("Uploaded Files:")
+        for file_name in uploaded_files:
+            ui.label(file_name)
+
+uploader = ui.upload(on_upload=handle_upload, multiple=True)
+uploader.on('finish', update_file_list)
+
+file_list_container = ui.column()
 
 ui.run()
