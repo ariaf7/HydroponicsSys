@@ -15,8 +15,16 @@ import shutil
 import zipfile
 import io
 import cv2
-
 clicks = []
+uploaded_files = []
+
+# Display for showing selected points
+points_display = ui.column()
+with points_display:
+    ui.label("🖱 Click 4 points on the image to select ROI")
+
+# Container for image
+image_container = ui.column()
 
 def run_cropping(input_folder, output_folder, roi):
     os.makedirs(output_folder, exist_ok=True)
@@ -31,14 +39,6 @@ def run_cropping(input_folder, output_folder, roi):
         cropped = image[int(y):int(y + h), int(x):int(x + w)]
         output_path = os.path.join(output_folder, filename)
         cv2.imwrite(output_path, cropped)
-
-uploaded_files = []
-
-points_display = ui.column()
-with points_display:
-    ui.label("🖱 Click 4 points on the image to select ROI")
-
-image_container = ui.column()
 
 def on_image_click(e):
     if len(clicks) < 4:
@@ -60,10 +60,10 @@ def reset_points():
     with points_display:
         ui.label("🖱 Click 4 points on the image to select ROI")
 
-def show_first_image(files):
-    if not files:
+def show_first_image():
+    if not uploaded_files:
         return
-    first_file = files[0]
+    first_file = uploaded_files[0]
     temp_path = os.path.join(tempfile.gettempdir(), first_file.name)
     first_file.save(temp_path)
     image_container.clear()
@@ -105,12 +105,13 @@ ui.button("Crop and Download ZIP", on_click=process_images)
 
 upload = ui.upload(multiple=True).props('accept=".jpg,.jpeg,.png"')
 
-@upload.on("update")
-def on_upload(e):
+def handle_upload(e):
     uploaded_files.clear()
     uploaded_files.extend(e.args)
     reset_points()
-    show_first_image(uploaded_files)
+    show_first_image()
+
+upload.on_upload(handle_upload)
 
 # ---------------- RUN SERVER ----------------
 
