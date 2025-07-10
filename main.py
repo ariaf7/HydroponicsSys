@@ -42,7 +42,7 @@ def reset_points():
 
 def show_first_image():
     if not uploaded_files:
-        ui.notify("return.")
+        # ui.notify("return.")
         return
     
     first_file = uploaded_files[0]
@@ -50,7 +50,7 @@ def show_first_image():
     with open(temp_path, 'wb') as f:
         f.write(first_file.content.read())
     ui.interactive_image(temp_path, on_mouse=on_image_click, events=['click'], cross=True)
-    ui.notify("made.")
+    # ui.notify("made.")
 
 def process_images():
     if len(clicks) != 4 or not uploaded_files:
@@ -94,6 +94,7 @@ def handle_upload(e: events.UploadEventArguments):
     uploaded_files.extend(e.files or [])
     reset_points()
     show_first_image()
+    ui.notify("made.")
 
 upload_widget.on_upload(handle_upload)
 
