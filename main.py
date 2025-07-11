@@ -99,7 +99,7 @@ def update_file_list():
     with file_list_container:
         ui.label("Uploaded Files:")
         for file_name in uploaded_files:
-            ui.label(', '.join(file_name))
+            ui.label(file_name.name)
 
 uploader = ui.upload(on_upload=handle_upload, multiple=True)
 ui.button("Crop and Download ZIP", on_click=process_images)
@@ -110,9 +110,8 @@ file_list_container = ui.column()
 
 ######## TIMELAPSE ######
 
-with ui.row():
-    ui.label('🎞️ Frames per second (speed)')
-    fps = ui.slider(min=0.1, max=5.0, value=1.0, step=0.1)
+
+fps = ui.slider(min=0.1, max=5.0, value=1.0, step=0.1)
 
 
 def process_timelapse():
