@@ -17,25 +17,30 @@ def crop_ready():
     y = int(min(y_coords))
     w = int(max(x_coords) - x)
     h = int(max(y_coords) - y)
-    roi = (x,y,w,h)
+    roi = (x, y, w, h)
+
+    # Save uploaded files to temp input folder
     temp_input = tempfile.mkdtemp()
     for file in uploaded_files:
         path = os.path.join(temp_input, file.name)
         with open(path, 'wb') as f:
             f.write(file.content.read())
 
+    # Create temp output folder and run cropping
     temp_output = tempfile.mkdtemp()
     run_cropping(temp_input, temp_output, roi)
 
-    zip_buffer = io.BytesIO()
-    with zipfile.ZipFile(zip_buffer, "w") as zipf:
+    # Zip the cropped images to a file
+    zip_path = os.path.join(tempfile.gettempdir(), "cropped_images.zip")
+    with zipfile.ZipFile(zip_path, "w") as zipf:
         for fname in os.listdir(temp_output):
             fpath = os.path.join(temp_output, fname)
             zipf.write(fpath, arcname=fname)
-    zip_buffer.seek(0)
-    ui.download(zip_buffer, filename='cropped_images.zip')
 
+    # Download the zip file
+    ui.download(zip_path, filename="cropped_images.zip")
 
+    # Clean up
     shutil.rmtree(temp_input)
     shutil.rmtree(temp_output)
 
@@ -92,33 +97,6 @@ def process_images():
         ui.notify("Please upload images and select exactly 4 points", type="warning")
         return
 
-    x1_coords = [pt[0] for pt in clicks]
-    y1_coords = [pt[1] for pt in clicks]
-    x2_coords = [pt[2] for pt in clicks]
-    y2_coords = [pt[3] for pt in clicks]
-    roi = (x1_coords, y1_coords, x2_coords, y2_coords)
-
-    temp_input = tempfile.mkdtemp()
-    for file in uploaded_files:
-        path = os.path.join(temp_input, file.name)
-        with open(path, 'wb') as f:
-            f.write(file.content.read())
-
-    temp_output = tempfile.mkdtemp()
-
-    run_cropping(temp_input, temp_output, roi)
-
-    zip_buffer = io.BytesIO()
-    with zipfile.ZipFile(zip_buffer, "w") as zipf:
-        for fname in os.listdir(temp_output):
-            fpath = os.path.join(temp_output, fname)
-            zipf.write(fpath, arcname=fname)
-    zip_buffer.seek(0)
-
-    ui.download(data=zip_buffer, filename="cropped_images.zip")
-
-    shutil.rmtree(temp_input)
-    shutil.rmtree(temp_output)
 
 ui.button("Reset Points", on_click=reset_points)
 ui.button("Crop and Download ZIP", on_click=process_images)
