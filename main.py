@@ -110,7 +110,10 @@ file_list_container = ui.column()
 
 ######## TIMELAPSE ######
 
-fps = ui.slider(min=0.1, max=5, value=1, step=0.1, label='Frames per second (speed)')
+with ui.row():
+    ui.label('🎞️ Frames per second (speed)')
+    fps = ui.slider(min=0.1, max=5.0, value=1.0, step=0.1)
+
 
 def process_timelapse():
     if not uploaded_files:
