@@ -9,6 +9,7 @@ import cv2
 
 clicks = []
 uploaded_files = []
+ii = None 
 
 def run_cropping(input_folder, output_folder, roi):
     os.makedirs(output_folder, exist_ok=True)
@@ -25,9 +26,10 @@ def run_cropping(input_folder, output_folder, roi):
         cv2.imwrite(output_path, cropped)
 
 def on_image_click(e: events.MouseEventArguments):
+    global ii
     if len(clicks) < 4:
         color = 'SkyBlue' if e.type == 'mousedown' else 'SteelBlue'
-        ui.content += f'<circle cx="{e.image_x}" cy="{e.image_y}" r="15" fill="none" stroke="{color}" stroke-width="4" />'
+        ii.content += f'<circle cx="{e.image_x}" cy="{e.image_y}" r="15" fill="none" stroke="{color}" stroke-width="4" />'
         ui.notify(f'{e.type} at ({e.image_x:.1f}, {e.image_y:.1f})')
         clicks.append((e.image_x, e.image_y))
         ui.notify(f"Point {len(clicks)}: ({int(e.image_x)}, {int(e.image_y)})")
@@ -41,6 +43,7 @@ def reset_points():
     ui.notify("🩹 Points reset. Please click 4 new points on the image.")
 
 def show_first_image():
+    global ii
     if not uploaded_files:
         ui.notify("return.",type="warning")
         return
@@ -49,7 +52,7 @@ def show_first_image():
     temp_path = os.path.join(tempfile.gettempdir(), first_file.name)
     with open(temp_path, 'wb') as f:
         f.write(first_file.content.read())
-    ui.interactive_image(temp_path, on_mouse=on_image_click, events=['click'], cross=True)
+    ii = ui.interactive_image(temp_path, on_mouse=on_image_click, events=['click'], cross=True)
     ui.notify("made.",type="warning")
 
 def process_images():
@@ -89,8 +92,6 @@ def process_images():
 
 ui.button("Reset Points", on_click=reset_points)
 ui.button("Crop and Download ZIP", on_click=process_images)
-
-uploaded_files = []
 
 def handle_upload(e: events.UploadEventArguments):
     uploaded_files.append(e)
