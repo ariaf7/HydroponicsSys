@@ -33,8 +33,8 @@ def crop_ready():
             fpath = os.path.join(temp_output, fname)
             zipf.write(fpath, arcname=fname)
     zip_buffer.seek(0)
+    ui.download(zip_buffer, filename='cropped_images.zip')
 
-    ui.download(data=zip_buffer, filename="cropped_images.zip")
 
     shutil.rmtree(temp_input)
     shutil.rmtree(temp_output)
