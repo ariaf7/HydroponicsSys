@@ -90,12 +90,10 @@ def process_images():
 ui.button("Reset Points", on_click=reset_points)
 ui.button("Crop and Download ZIP", on_click=process_images)
 
-upload_widget = ui.upload(multiple=True).on("multi_upload", lambda e: handle_upload(e))
-
 uploaded_files = []
 
 def handle_upload(e: events.UploadEventArguments):
-    uploaded_files.append(e.name)
+    uploaded_files.append(e)
     ui.notify(f'Uploaded {e.name}')
 
 def update_file_list():
