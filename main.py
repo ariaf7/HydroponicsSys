@@ -119,28 +119,50 @@ def process_timelapse():
     if not uploaded_files:
         ui.notify("Please upload images first", type="warning")
         return
+    make_and_download_timelapse(uploaded_files, fps.value)
+    # temp_input = tempfile.mkdtemp()
+    # for file in uploaded_files:
+    #     file.content.seek(0)  # ⬅️ Reset pointer here too
+    #     path = os.path.join(temp_input, file.name)
+    #     with open(path, 'wb') as f:
+    #         f.write(file.content.read())
 
+    # temp_output = tempfile.mkdtemp()
+    # output_path = os.path.join(temp_output, "timelapse.mp4")
+
+    # success = run_timelapse(temp_input, output_path, fps.value)
+    # if not success:
+    #     ui.notify("No valid images to create timelapse", type="error")
+    #     return
+
+    # ui.download(output_path, filename="timelapse.mp4")
+
+    # shutil.rmtree(temp_input)
+    # shutil.rmtree(temp_output)
+
+ui.button("Create Timelapse", on_click=process_timelapse)
+
+
+def make_and_download_timelapse(uploaded_files, fps):
     temp_input = tempfile.mkdtemp()
     for file in uploaded_files:
-        file.content.seek(0)  # ⬅️ Reset pointer here too
         path = os.path.join(temp_input, file.name)
         with open(path, 'wb') as f:
             f.write(file.content.read())
 
-    temp_output = tempfile.mkdtemp()
-    output_path = os.path.join(temp_output, "timelapse.mp4")
+    temp_output_path = os.path.join(tempfile.gettempdir(), "timelapse.mp4")
 
-    success = run_timelapse(temp_input, output_path, fps.value)
+    success = run_timelapse(temp_input, temp_output_path, fps)
     if not success:
-        ui.notify("No valid images to create timelapse", type="error")
+        ui.notify("❌ Failed to generate timelapse", type="warning")
         return
 
-    ui.download(output_path, filename="timelapse.mp4")
+    ui.download(temp_output_path, filename="timelapse.mp4")
+    ui.notify("🎉 Timelapse ready for download!")
 
-    shutil.rmtree(temp_input)
-    shutil.rmtree(temp_output)
+    # Optionally clean up temp_input
+    # shutil.rmtree(temp_input)
 
-ui.button("Create Timelapse", on_click=process_timelapse)
 
 
 ui.run()
