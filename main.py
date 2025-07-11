@@ -89,8 +89,6 @@ def process_images():
         return
 
 
-ui.button("Reset Points", on_click=reset_points)
-ui.button("Crop and Download ZIP", on_click=process_images)
 
 def handle_upload(e: events.UploadEventArguments):
     uploaded_files.append(e)
@@ -104,6 +102,8 @@ def update_file_list():
             ui.label(file_name)
 
 uploader = ui.upload(on_upload=handle_upload, multiple=True)
+ui.button("Crop and Download ZIP", on_click=process_images)
+ui.button("Reset Points", on_click=reset_points)
 uploader.on('finish', update_file_list)
 
 file_list_container = ui.column()
@@ -122,9 +122,10 @@ def process_timelapse():
 
     temp_input = tempfile.mkdtemp()
     for file in uploaded_files:
+        file.content.seek(0)  # ⬅️ Reset pointer here too
         path = os.path.join(temp_input, file.name)
         with open(path, 'wb') as f:
-            f.write(file.read())
+            f.write(file.content.read())
 
     temp_output = tempfile.mkdtemp()
     output_path = os.path.join(temp_output, "timelapse.mp4")
