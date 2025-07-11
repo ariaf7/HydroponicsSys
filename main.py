@@ -11,12 +11,13 @@ clicks = []
 uploaded_files = []
 ii = None 
 def crop_ready():
-    x1_coords = [pt[0] for pt in clicks]
-    y1_coords = [pt[1] for pt in clicks]
-    x2_coords = [pt[2] for pt in clicks]
-    y2_coords = [pt[3] for pt in clicks]
-    roi = (x1_coords, y1_coords, x2_coords, y2_coords)
-
+    x_coords = [pt[0] for pt in clicks]
+    y_coords = [pt[1] for pt in clicks]
+    x = int(min(x_coords))
+    y = int(min(y_coords))
+    w = int(max(x_coords) - x)
+    h = int(max(y_coords) - y)
+    roi = (x,y,w,h)
     temp_input = tempfile.mkdtemp()
     for file in uploaded_files:
         path = os.path.join(temp_input, file.name)
@@ -58,7 +59,7 @@ def on_image_click(e: events.MouseEventArguments):
         color = 'SkyBlue' if e.type == 'mousedown' else 'SteelBlue'
         ii.content += f'<circle cx="{e.image_x}" cy="{e.image_y}" r="15" fill="none" stroke="{color}" stroke-width="4" />'
         ui.notify(f'{e.type} at ({e.image_x:.1f}, {e.image_y:.1f})')
-        clicks.append((e.image_x, e.image_y))
+        clicks.append([e.image_x, e.image_y])
         ui.notify(f"Point {len(clicks)}: ({int(e.image_x)}, {int(e.image_y)})")
         if len(clicks) == 4:
             ui.notify("✅ 4 points selected! You can now crop.")
@@ -104,6 +105,7 @@ def process_images():
             f.write(file.content.read())
 
     temp_output = tempfile.mkdtemp()
+
     run_cropping(temp_input, temp_output, roi)
 
     zip_buffer = io.BytesIO()
