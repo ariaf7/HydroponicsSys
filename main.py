@@ -10,6 +10,33 @@ import cv2
 clicks = []
 uploaded_files = []
 ii = None 
+def crop_ready():
+    x1_coords = [pt[0] for pt in clicks]
+    y1_coords = [pt[1] for pt in clicks]
+    x2_coords = [pt[2] for pt in clicks]
+    y2_coords = [pt[3] for pt in clicks]
+    roi = (x1_coords, y1_coords, x2_coords, y2_coords)
+
+    temp_input = tempfile.mkdtemp()
+    for file in uploaded_files:
+        path = os.path.join(temp_input, file.name)
+        with open(path, 'wb') as f:
+            f.write(file.content.read())
+
+    temp_output = tempfile.mkdtemp()
+    run_cropping(temp_input, temp_output, roi)
+
+    zip_buffer = io.BytesIO()
+    with zipfile.ZipFile(zip_buffer, "w") as zipf:
+        for fname in os.listdir(temp_output):
+            fpath = os.path.join(temp_output, fname)
+            zipf.write(fpath, arcname=fname)
+    zip_buffer.seek(0)
+
+    ui.download(data=zip_buffer, filename="cropped_images.zip")
+
+    shutil.rmtree(temp_input)
+    shutil.rmtree(temp_output)
 
 def run_cropping(input_folder, output_folder, roi):
     os.makedirs(output_folder, exist_ok=True)
@@ -35,6 +62,7 @@ def on_image_click(e: events.MouseEventArguments):
         ui.notify(f"Point {len(clicks)}: ({int(e.image_x)}, {int(e.image_y)})")
         if len(clicks) == 4:
             ui.notify("✅ 4 points selected! You can now crop.")
+            crop_ready()
     else:
         ui.notify("Already selected 4 points. Press Reset to start over.", type="warning")
 
@@ -63,11 +91,11 @@ def process_images():
         ui.notify("Please upload images and select exactly 4 points", type="warning")
         return
 
-    x_coords = [pt[0] for pt in clicks]
-    y_coords = [pt[1] for pt in clicks]
-    x, y = min(x_coords), min(y_coords)
-    w, h = max(x_coords) - x, max(y_coords) - y
-    roi = (x, y, w, h)
+    x1_coords = [pt[0] for pt in clicks]
+    y1_coords = [pt[1] for pt in clicks]
+    x2_coords = [pt[2] for pt in clicks]
+    y2_coords = [pt[3] for pt in clicks]
+    roi = (x1_coords, y1_coords, x2_coords, y2_coords)
 
     temp_input = tempfile.mkdtemp()
     for file in uploaded_files:
