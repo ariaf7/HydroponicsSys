@@ -22,9 +22,11 @@ def crop_ready():
     # Save uploaded files to temp input folder
     temp_input = tempfile.mkdtemp()
     for file in uploaded_files:
+        file.content.seek(0)  # ⬅️ Reset pointer here too
         path = os.path.join(temp_input, file.name)
         with open(path, 'wb') as f:
             f.write(file.content.read())
+
 
     # Create temp output folder and run cropping
     temp_output = tempfile.mkdtemp()
@@ -94,6 +96,7 @@ def show_first_image():
     first_file = uploaded_files[0]
     temp_path = os.path.join(tempfile.gettempdir(), first_file.name)
     with open(temp_path, 'wb') as f:
+        first_file.content.seek(0)  # ⬅️ Reset the pointer
         f.write(first_file.content.read())
     ii = ui.interactive_image(temp_path, on_mouse=on_image_click, events=['click'], cross=True)
 
