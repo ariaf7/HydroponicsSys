@@ -99,7 +99,7 @@ def update_file_list():
     with file_list_container:
         ui.label("Uploaded Files:")
         for file_name in uploaded_files:
-            ui.label(file_name)
+            ui.label(', '.join(file_name))
 
 uploader = ui.upload(on_upload=handle_upload, multiple=True)
 ui.button("Crop and Download ZIP", on_click=process_images)
