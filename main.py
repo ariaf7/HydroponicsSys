@@ -6,10 +6,12 @@ import shutil
 import zipfile
 import io
 import cv2
-
+from your_code import *
+ui.markdown("🌱 Hydroponic System Analysis")
 clicks = []
 uploaded_files = []
 ii = None 
+######## CROP ######
 def crop_ready():
     x_coords = [pt[0] for pt in clicks]
     y_coords = [pt[1] for pt in clicks]
@@ -45,28 +47,6 @@ def crop_ready():
     # Clean up
     shutil.rmtree(temp_input)
     shutil.rmtree(temp_output)
-
-def run_cropping(input_folder, output_folder, roi):
-    os.makedirs(output_folder, exist_ok=True)
-    x, y, w, h = roi
-
-    for filename in os.listdir(input_folder):
-        if not filename.lower().endswith(('.png', '.jpg', '.jpeg')):
-            continue
-        filepath = os.path.join(input_folder, filename)
-        image = cv2.imread(filepath)
-        if image is None:
-            print(f"⚠️ Could not read: {filename}")
-            continue
-
-        cropped = image[int(y):int(y + h), int(x):int(x + w)]
-        if cropped.size == 0:
-            print(f"❌ Empty crop for: {filename}")
-            continue
-
-        output_path = os.path.join(output_folder, filename)
-        cv2.imwrite(output_path, cropped)
-        print(f"✅ Cropped and saved: {filename}")
 
 
 def on_image_click(e: events.MouseEventArguments):
@@ -105,7 +85,7 @@ def process_images():
         ui.notify("Please upload files", type="warning")
     show_first_image()    
     if len(clicks) != 4 or not uploaded_files:
-        ui.notify("Please upload images and select exactly 4 points", type="warning")
+        ui.notify("Please select exactly 4 points", type="warning")
         return
 
 
@@ -127,5 +107,36 @@ uploader = ui.upload(on_upload=handle_upload, multiple=True)
 uploader.on('finish', update_file_list)
 
 file_list_container = ui.column()
+
+######## TIMELAPSE ######
+
+fps = ui.slider(min=0.1, max=5, value=1, step=0.1, label='Frames per second (speed)')
+
+def process_timelapse():
+    if not uploaded_files:
+        ui.notify("Please upload images first", type="warning")
+        return
+
+    temp_input = tempfile.mkdtemp()
+    for file in uploaded_files:
+        path = os.path.join(temp_input, file.name)
+        with open(path, 'wb') as f:
+            f.write(file.read())
+
+    temp_output = tempfile.mkdtemp()
+    output_path = os.path.join(temp_output, "timelapse.mp4")
+
+    success = run_timelapse(temp_input, output_path, fps.value)
+    if not success:
+        ui.notify("No valid images to create timelapse", type="error")
+        return
+
+    ui.download(output_path, filename="timelapse.mp4")
+
+    shutil.rmtree(temp_input)
+    shutil.rmtree(temp_output)
+
+ui.button("Create Timelapse", on_click=process_timelapse)
+
 
 ui.run()
