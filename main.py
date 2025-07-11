@@ -146,26 +146,22 @@ ui.button("Create Timelapse", on_click=process_timelapse)
 def make_and_download_timelapse(uploaded_files, fps):
     temp_input = tempfile.mkdtemp()
     for file in uploaded_files:
-        file.content.seek(0)
         path = os.path.join(temp_input, file.name)
         with open(path, 'wb') as f:
             f.write(file.content.read())
 
-    # Use storage path (publicly accessible)
+    # Use UUID for a unique filename
     output_filename = f"timelapse_{uuid.uuid4().hex}.mp4"
-    output_path = storage.path(output_filename)
+    output_path = os.path.join(tempfile.gettempdir(), output_filename)
 
-    success = run_timelapse(temp_input, output_path, 1.0)
-    shutil.rmtree(temp_input)
-
+    success = run_timelapse(temp_input, output_path, fps)
     if success:
-        ui.notify("🎬 Timelapse ready!")
-        ui.download(storage.url(output_filename), filename='timelapse.mp4')
+        ui.download(output_path, filename="timelapse.mp4")
     else:
-        ui.notify("❌ Failed to generate timelapse.", type="error")
+        ui.notify("❌ Failed to generate timelapse", type="warning")
 
     # cleanup temp_input only (leave output file for download)
-    #shutil.rmtree(temp_input)
+    shutil.rmtree(temp_input)
 
 
 
