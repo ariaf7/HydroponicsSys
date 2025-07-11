@@ -46,26 +46,35 @@ def crop_ready():
 
 def run_cropping(input_folder, output_folder, roi):
     os.makedirs(output_folder, exist_ok=True)
+    x, y, w, h = roi
+
     for filename in os.listdir(input_folder):
         if not filename.lower().endswith(('.png', '.jpg', '.jpeg')):
             continue
         filepath = os.path.join(input_folder, filename)
         image = cv2.imread(filepath)
         if image is None:
+            print(f"⚠️ Could not read: {filename}")
             continue
-        x, y, w, h = roi
+
         cropped = image[int(y):int(y + h), int(x):int(x + w)]
+        if cropped.size == 0:
+            print(f"❌ Empty crop for: {filename}")
+            continue
+
         output_path = os.path.join(output_folder, filename)
         cv2.imwrite(output_path, cropped)
+        print(f"✅ Cropped and saved: {filename}")
+
 
 def on_image_click(e: events.MouseEventArguments):
     global ii
     if len(clicks) < 4:
         color = 'SkyBlue' if e.type == 'mousedown' else 'SteelBlue'
         ii.content += f'<circle cx="{e.image_x}" cy="{e.image_y}" r="15" fill="none" stroke="{color}" stroke-width="4" />'
-        ui.notify(f'{e.type} at ({e.image_x:.1f}, {e.image_y:.1f})')
+        # ui.notify(f'{e.type} at ({e.image_x:.1f}, {e.image_y:.1f})')
         clicks.append([e.image_x, e.image_y])
-        ui.notify(f"Point {len(clicks)}: ({int(e.image_x)}, {int(e.image_y)})")
+        # ui.notify(f"Point {len(clicks)}: ({int(e.image_x)}, {int(e.image_y)})")
         if len(clicks) == 4:
             ui.notify("✅ 4 points selected! You can now crop.")
             crop_ready()
@@ -79,7 +88,7 @@ def reset_points():
 def show_first_image():
     global ii
     if not uploaded_files:
-        ui.notify("return.",type="warning")
+        ui.notify("Upload files",type="warning")
         return
     
     first_file = uploaded_files[0]
@@ -87,11 +96,10 @@ def show_first_image():
     with open(temp_path, 'wb') as f:
         f.write(first_file.content.read())
     ii = ui.interactive_image(temp_path, on_mouse=on_image_click, events=['click'], cross=True)
-    ui.notify("made.",type="warning")
 
 def process_images():
     if not uploaded_files:
-        ui.notify("Please", type="warning")
+        ui.notify("Please upload files", type="warning")
     show_first_image()    
     if len(clicks) != 4 or not uploaded_files:
         ui.notify("Please upload images and select exactly 4 points", type="warning")
