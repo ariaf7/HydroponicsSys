@@ -118,7 +118,7 @@ def process_timelapse():
     if not uploaded_files:
         ui.notify("Please upload images first", type="warning")
         return
-    make_and_download_timelapse(uploaded_files, fps.value)
+    make_and_download_timelapse(uploaded_files, 1.0)
     # temp_input = tempfile.mkdtemp()
     # for file in uploaded_files:
     #     file.content.seek(0)  # ⬅️ Reset pointer here too
@@ -144,23 +144,24 @@ ui.button("Create Timelapse", on_click=process_timelapse)
 
 def make_and_download_timelapse(uploaded_files, fps):
     temp_input = tempfile.mkdtemp()
+
     for file in uploaded_files:
+        file.content.seek(0)  # reset pointer
         path = os.path.join(temp_input, file.name)
         with open(path, 'wb') as f:
             f.write(file.content.read())
 
-    temp_output_path = os.path.join(tempfile.gettempdir(), "timelapse.mp4")
+    output_path = os.path.join(tempfile.gettempdir(), 'timelapse.mp4')
+    success = run_timelapse(temp_input, output_path, 1.0)
 
-    success = run_timelapse(temp_input, temp_output_path, fps)
-    if not success:
-        ui.notify("❌ Failed to generate timelapse", type="warning")
-        return
+    if success and os.path.exists(output_path):
+        ui.notify("🎬 Timelapse ready!")
+        ui.download(output_path, filename='timelapse.mp4')
+    else:
+        ui.notify("❌ Failed to generate timelapse.", type="error")
 
-    ui.download(temp_output_path, filename="timelapse.mp4")
-    ui.notify("🎉 Timelapse ready for download!")
-
-    # Optionally clean up temp_input
-    # shutil.rmtree(temp_input)
+    # cleanup temp_input only (leave output file for download)
+    shutil.rmtree(temp_input)
 
 
 
