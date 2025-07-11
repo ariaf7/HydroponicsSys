@@ -1,4 +1,5 @@
-from nicegui import ui, events
+from nicegui import ui, events, storage
+import uuid
 from PIL import Image
 import os
 import tempfile
@@ -111,7 +112,7 @@ file_list_container = ui.column()
 ######## TIMELAPSE ######
 
 
-fps = ui.slider(min=0.1, max=5.0, value=1.0, step=0.1)
+
 
 
 def process_timelapse():
@@ -144,24 +145,27 @@ ui.button("Create Timelapse", on_click=process_timelapse)
 
 def make_and_download_timelapse(uploaded_files, fps):
     temp_input = tempfile.mkdtemp()
-
     for file in uploaded_files:
-        file.content.seek(0)  # reset pointer
+        file.content.seek(0)
         path = os.path.join(temp_input, file.name)
         with open(path, 'wb') as f:
             f.write(file.content.read())
 
-    output_path = os.path.join(tempfile.gettempdir(), 'timelapse.mp4')
-    success = run_timelapse(temp_input, output_path, 1.0)
+    # Use storage path (publicly accessible)
+    output_filename = f"timelapse_{uuid.uuid4().hex}.mp4"
+    output_path = storage.path(output_filename)
 
-    if success and os.path.exists(output_path):
+    success = run_timelapse(temp_input, output_path, 1.0)
+    shutil.rmtree(temp_input)
+
+    if success:
         ui.notify("🎬 Timelapse ready!")
-        ui.download(output_path, filename='timelapse.mp4')
+        ui.download(storage.url(output_filename), filename='timelapse.mp4')
     else:
         ui.notify("❌ Failed to generate timelapse.", type="error")
 
     # cleanup temp_input only (leave output file for download)
-    shutil.rmtree(temp_input)
+    #shutil.rmtree(temp_input)
 
 
 
