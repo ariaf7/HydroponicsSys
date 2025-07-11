@@ -259,73 +259,76 @@ def run_growth(folder, mask_folder, output_folder):
         plt.clf()
     print(f"✅ Charts saved to: {output_folder}")
 
-def run_timelapse(folder, output_path):
-    print(f"[TIMELAPSE] Running on folder: {folder}")
+# def run_timelapse(folder, output_path):
+#     print(f"[TIMELAPSE] Running on folder: {folder}")
     
-    img_array = []
-    image_extensions = ['*.png', '*.jpg', '*.jpeg']
-    image_files = []
-    for ext in image_extensions:
-        image_files.extend(glob.glob(os.path.join(folder, ext)))
-    for filename in image_files:
-        img = cv2.imread(filename)
-        if img is None:
-            print(f"Skipping unreadable file: {filename}")
+#     img_array = []
+#     image_extensions = ['*.png', '*.jpg', '*.jpeg']
+#     image_files = []
+#     for ext in image_extensions:
+#         image_files.extend(glob.glob(os.path.join(folder, ext)))
+#     for filename in image_files:
+#         img = cv2.imread(filename)
+#         if img is None:
+#             print(f"Skipping unreadable file: {filename}")
+#             continue
+#         height, width, _ = img.shape
+#         size = (width, height)
+#         img_array.append(img)
+
+#     if not img_array:
+#         print("⚠️ No valid images found in folder.")
+#         return
+
+#     out = cv2.VideoWriter(output_path, cv2.VideoWriter_fourcc(*"mp4v"), 5, size)
+#     for img in img_array:
+#         out.write(img)
+#     out.release()
+
+#     print(f"✅ Timelapse saved to: {output_path}")
+
+def run_timelapse(input_folder, output_path, fps):
+    images = []
+    for filename in sorted(os.listdir(input_folder)):
+        if not filename.lower().endswith(('.png', '.jpg', '.jpeg')):
             continue
-        height, width, _ = img.shape
-        size = (width, height)
-        img_array.append(img)
+        img_path = os.path.join(input_folder, filename)
+        img = cv2.imread(img_path)
+        if img is None:
+            continue
+        images.append(img)
+    if not images:
+        return False
 
-    if not img_array:
-        print("⚠️ No valid images found in folder.")
-        return
+    height, width, _ = images[0].shape
+    fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+    video = cv2.VideoWriter(output_path, fourcc, fps, (width, height))
 
-    out = cv2.VideoWriter(output_path, cv2.VideoWriter_fourcc(*"mp4v"), 5, size)
-    for img in img_array:
-        out.write(img)
-    out.release()
+    for img in images:
+        video.write(img)
+    video.release()
+    return True
 
-    print(f"✅ Timelapse saved to: {output_path}")
+
 
 def run_cropping(input_folder, output_folder, roi):
-    """
-    Crop all images in a folder using the provided ROI (x, y, w, h) and save them to the output folder.
-    The first cropped image will be displayed using Streamlit.
-    """
-    st.write(f"📸 Cropping images in: `{input_folder}` using ROI: `{roi}`")
-    Path(output_folder).mkdir(parents=True, exist_ok=True)
+    os.makedirs(output_folder, exist_ok=True)
+    x, y, w, h = roi
 
-    # Validate ROI
-    if not isinstance(roi, tuple) or len(roi) != 4:
-        st.error("❌ Invalid ROI format. Must be a tuple of (x, y, w, h).")
-        return
-
-    # Find image files
-    image_extensions = ['*.png', '*.jpg', '*.jpeg']
-    image_files = []
-    for ext in image_extensions:
-        image_files.extend(glob.glob(os.path.join(input_folder, ext)))
-
-    if not image_files:
-        st.error("❌ No image files found.")
-        return
-
-    first_previewed = False
-    for file in image_files:
-        print(f"Cropping file: {file}")
-        image = cv2.imread(file)
+    for filename in os.listdir(input_folder):
+        if not filename.lower().endswith(('.png', '.jpg', '.jpeg')):
+            continue
+        filepath = os.path.join(input_folder, filename)
+        image = cv2.imread(filepath)
         if image is None:
-            st.warning(f"Skipping unreadable file: {file}")
+            print(f"⚠️ Could not read: {filename}")
             continue
 
-        x, y, w, h = roi
         cropped = image[int(y):int(y + h), int(x):int(x + w)]
-        filename = os.path.basename(file)
+        if cropped.size == 0:
+            print(f"❌ Empty crop for: {filename}")
+            continue
+
         output_path = os.path.join(output_folder, filename)
         cv2.imwrite(output_path, cropped)
-
-        if not first_previewed:
-            st.image(cropped[:, :, ::-1], caption=f"Preview: {filename} (cropped)", use_container_width=True, channels="RGB")
-            first_previewed = True
-
-    st.success(f"✅ Cropping complete! Images saved to: `{output_folder}`")
+        print(f"✅ Cropped and saved: {filename}")
